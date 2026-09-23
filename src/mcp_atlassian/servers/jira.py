@@ -3366,6 +3366,65 @@ async def get_project_issue_types(
 
 @jira_mcp.tool(
     tags={"jira", "read", "toolset:jira_projects"},
+    annotations={"title": "Get Project Statuses", "readOnlyHint": True},
+)
+async def get_project_statuses(
+    ctx: Context,
+    project_key: Annotated[
+        str,
+        Field(
+            description="Jira project key (e.g., 'PROJ', 'JTEST')",
+            pattern=PROJECT_KEY_PATTERN,
+        ),
+    ],
+) -> str:
+    """Get each issue type in a project along with its available statuses.
+
+    Returns the full workflow status set for every issue type in the
+    project (not just the transitions available from one issue's current
+    status), so you can answer "what statuses can tickets of type X be in"
+    in a single call.
+
+    Args:
+        ctx: The FastMCP context.
+        project_key: The project key.
+
+    Returns:
+        JSON string with a list of issue types, each including id, name,
+        subtask flag, and its statuses (id, name, category).
+    """
+    jira = await get_jira_fetcher(ctx)
+    issue_types = []
+    for issue_type in jira.get_project_statuses(project_key):
+        issue_type_id = issue_type.get("id")
+        statuses = []
+        for status in issue_type.get("statuses", []) or []:
+            if not isinstance(status, dict):
+                continue
+            status_id = status.get("id")
+            category = status.get("statusCategory") or {}
+            statuses.append(
+                {
+                    "id": str(status_id) if status_id is not None else "",
+                    "name": status.get("name", ""),
+                    "category": category.get("name", "")
+                    if isinstance(category, dict)
+                    else "",
+                }
+            )
+        issue_types.append(
+            {
+                "id": str(issue_type_id) if issue_type_id is not None else "",
+                "name": issue_type.get("name", ""),
+                "subtask": bool(issue_type.get("subtask", False)),
+                "statuses": statuses,
+            }
+        )
+    return json.dumps(issue_types, indent=2, ensure_ascii=False)
+
+
+@jira_mcp.tool(
+    tags={"jira", "read", "toolset:jira_projects"},
     annotations={"title": "Get Create Fields", "readOnlyHint": True},
 )
 async def get_create_fields(

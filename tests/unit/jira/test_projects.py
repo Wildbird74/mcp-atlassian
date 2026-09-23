@@ -446,6 +446,50 @@ def test_get_project_notification_scheme_exception(projects_mixin: ProjectsMixin
     projects_mixin.jira.get_project_notification_scheme.assert_called_once()
 
 
+def test_get_project_statuses(projects_mixin: ProjectsMixin):
+    """Test get_project_statuses returns issue types with their statuses."""
+    statuses_response = [
+        {
+            "id": "10000",
+            "name": "Epic",
+            "subtask": False,
+            "statuses": [
+                {
+                    "id": "1",
+                    "name": "To Do",
+                    "statusCategory": {"id": 2, "key": "new", "name": "To Do"},
+                },
+                {
+                    "id": "3",
+                    "name": "Done",
+                    "statusCategory": {"id": 3, "key": "done", "name": "Done"},
+                },
+            ],
+        }
+    ]
+    projects_mixin.jira.get_status_for_project.return_value = statuses_response
+
+    result = projects_mixin.get_project_statuses("PROJ1")
+    assert result == statuses_response
+    projects_mixin.jira.get_status_for_project.assert_called_once_with("PROJ1")
+
+
+def test_get_project_statuses_empty_response(projects_mixin: ProjectsMixin):
+    """Test get_project_statuses with a non-list response."""
+    projects_mixin.jira.get_status_for_project.return_value = {}
+
+    result = projects_mixin.get_project_statuses("PROJ1")
+    assert result == []
+
+
+def test_get_project_statuses_exception(projects_mixin: ProjectsMixin):
+    """Test get_project_statuses method with exception."""
+    projects_mixin.jira.get_status_for_project.side_effect = Exception("API error")
+
+    result = projects_mixin.get_project_statuses("PROJ1")
+    assert result == []
+
+
 def test_get_project_issue_types(
     projects_mixin: ProjectsMixin, mock_issue_types: list[dict]
 ):

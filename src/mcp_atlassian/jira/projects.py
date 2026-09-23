@@ -374,6 +374,30 @@ class ProjectsMixin(JiraClient, SearchOperationsProto):
             )
             return []
 
+    def get_project_statuses(self, project_key: str) -> list[dict[str, Any]]:
+        """
+        Get every issue type in a project along with its available statuses.
+
+        Unlike a per-issue transition list, this returns the full workflow
+        status set (id, name, category) for each issue type, so callers can
+        answer "what statuses can tickets of type X be in" without walking
+        every issue and every transition.
+
+        Args:
+            project_key: The project key
+
+        Returns:
+            List of issue type dicts, each with a "statuses" list. Empty
+            list on error.
+        """
+        try:
+            statuses = self.jira.get_status_for_project(project_key)
+            return statuses if isinstance(statuses, list) else []
+
+        except Exception as e:
+            logger.error(f"Error getting statuses for project {project_key}: {str(e)}")
+            return []
+
     def get_create_fields(
         self, project_key: str, issue_type_id: str
     ) -> list[dict[str, Any]]:

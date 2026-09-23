@@ -490,6 +490,7 @@ def test_jira_mcp(mock_jira_fetcher, mock_base_jira_config):
         get_project_fields,
         get_project_issue_types,
         get_project_issues,
+        get_project_statuses,
         get_project_versions,
         get_queue_issues,
         get_request_type_fields,
@@ -530,6 +531,7 @@ def test_jira_mcp(mock_jira_fetcher, mock_base_jira_config):
     jira_sub_mcp.add_tool(get_project_components)
     jira_sub_mcp.add_tool(get_project_fields)
     jira_sub_mcp.add_tool(get_project_issue_types)
+    jira_sub_mcp.add_tool(get_project_statuses)
     jira_sub_mcp.add_tool(get_create_fields)
     jira_sub_mcp.add_tool(get_all_projects)
     jira_sub_mcp.add_tool(search_projects)
@@ -1949,6 +1951,49 @@ async def test_get_project_issue_types_tool(jira_client, mock_jira_fetcher):
             "description": "A large body of work.",
             "subtask": False,
             "untranslated_name": "Epic",
+        }
+    ]
+
+
+@pytest.mark.anyio
+async def test_get_project_statuses_tool(jira_client, mock_jira_fetcher):
+    """Test jira_get_project_statuses returns issue types with statuses."""
+    mock_jira_fetcher.get_project_statuses.return_value = [
+        {
+            "id": "10000",
+            "name": "Epic",
+            "subtask": False,
+            "statuses": [
+                {
+                    "id": "1",
+                    "name": "To Do",
+                    "statusCategory": {"id": 2, "key": "new", "name": "To Do"},
+                },
+                {
+                    "id": "3",
+                    "name": "Done",
+                    "statusCategory": {"id": 3, "key": "done", "name": "Done"},
+                },
+            ],
+        }
+    ]
+
+    response = await jira_client.call_tool(
+        "jira_get_project_statuses",
+        {"project_key": "TEST"},
+    )
+
+    mock_jira_fetcher.get_project_statuses.assert_called_once_with("TEST")
+    data = json.loads(response.content[0].text)
+    assert data == [
+        {
+            "id": "10000",
+            "name": "Epic",
+            "subtask": False,
+            "statuses": [
+                {"id": "1", "name": "To Do", "category": "To Do"},
+                {"id": "3", "name": "Done", "category": "Done"},
+            ],
         }
     ]
 
